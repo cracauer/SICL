@@ -73,8 +73,8 @@
           (assert (null name))
           (assert (not (null definition)))
           (let* ((cst (cst:cst-from-expression definition))
-                 (client (make-instance 'sicl-boot-phase-0:client)))
-            (sicl-hir-to-cl:cst-eval client cst e4)))))
+                 (client (make-instance 'sicl-boot:client)))
+            (sicl-hir-interpreter:cst-eval client cst e4)))))
 
 (defun define-no-applicable-method (e4)
   (load-fasl "CLOS/no-applicable-method-defgenerics.fasl" e4)

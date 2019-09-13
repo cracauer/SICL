@@ -14,8 +14,6 @@
    #:lexical-location #:make-lexical-location
    #:new-temporary
    #:name
-   #:values-location #:make-values-location
-   #:variable-p
    #:external-input #:make-external-input
    #:register-location
    #:layer #:index
@@ -39,6 +37,7 @@
    ;; FIXME: check that these two are still needed.
    #:dynamic-environment #:*dynamic-environment*
    #:dynamic-environment-location
+   #:values-environment-location
    #:symbol-value-instruction
    #:set-symbol-value-instruction
    #:fdefinition-instruction
@@ -76,6 +75,7 @@
    #:fixnum-less-instruction
    #:fixnum-not-greater-instruction
    #:fixnum-equal-instruction
+   #:fixnum-divide-instruction #:rounding-mode
    #:float-add-instruction
    #:float-sub-instruction
    #:float-mul-instruction
@@ -93,21 +93,10 @@
    #:rplacd-instruction
    #:slot-read-instruction
    #:slot-write-instruction
-   #:memref1-instruction
-   #:memref2-instruction
-   #:memset1-instruction
-   #:memset2-instruction
-   #:signed-add-instruction
-   #:signed-sub-instruction
-   #:signed-less-instruction
-   #:signed-not-greater-instruction
-   #:unsigned-add-instruction
-   #:unsigned-sub-instruction
-   #:unsigned-less-instruction
-   #:unsigned-not-greater-instruction
-   #:equal-instruction
    #:multiple-to-fixed-instruction
    #:fixed-to-multiple-instruction
+   #:save-values-instruction
+   #:restore-values-instruction
    #:multiple-value-call-instruction
    #:create-cell-instruction
    #:fetch-instruction
@@ -127,4 +116,33 @@
    #:map-local-instructions #:filter-local-instructions
    #:local-instructions-of-type
    #:set-predecessors
-   #:offset))
+   #:offset
+   #:compute-argument-count-instruction
+   #:argument-instruction
+   ;; MIR instructions
+   #:memref1-instruction
+   #:memref2-instruction
+   #:memset1-instruction
+   #:memset2-instruction
+   #:signed-add-instruction
+   #:signed-sub-instruction
+   #:signed-less-instruction
+   #:signed-not-greater-instruction
+   #:unsigned-add-instruction
+   #:unsigned-sub-instruction
+   #:unsigned-less-instruction
+   #:unsigned-not-greater-instruction
+   #:equal-instruction
+   #:shift-left-instruction
+   #:logic-shift-right-instruction
+   #:arithmetic-shift-right-instruction
+   #:shifted-input #:shift-count
+   #:bitwise-and-instruction
+   #:bitwise-or-instruction
+   #:bitwise-exclusive-or-instruction
+   #:bitwise-not-instruction
+   #:sign-extend-instruction
+   ;; MIR data
+   #:raw-datum
+   #:raw-integer
+   #:raw-float))

@@ -4,8 +4,12 @@
   :depends-on (#:cleavir2-cst-to-ast
                #:cleavir2-ast-to-hir
                #:cleavir2-hir-transformations
-               #:sicl-hir-transformations)
+               #:sicl-hir-transformations
+               #:sicl-argument-processing)
   :serial t
   :components
   ((:file "packages")
-   (:file "ast-to-hir")))
+   (:file "client")
+   (:file "ast-to-hir")
+   (:file "breakpoint-instruction")
+   (:file "customization")))

@@ -4,7 +4,6 @@
   (:use #:common-lisp)
   (:shadow #:eval)
   (:export #:cst-to-ast
-           #:*use-file-compilation-sematics-p*
            #:convert
            #:convert-constant
            #:convert-constant-to-immediate
@@ -29,6 +28,7 @@
            #:entries-from-parameter-group
            #:lambda-list-from-parameter-group
            #:eval #:cst-eval
+           #:origin
            ;; Names of conditions.
            #:compilation-condition
            #:compilation-program-error

@@ -105,8 +105,8 @@
           (assert (null name))
           (assert (not (null definition)))
           (let* ((cst (cst:cst-from-expression definition))
-                 (client (make-instance 'sicl-boot-phase-0:client)))
-            (sicl-hir-to-cl:cst-eval client cst e3)))))
+                 (client (make-instance 'sicl-boot:client)))
+            (sicl-hir-interpreter:cst-eval client cst e3)))))
 
 (defun enable-generic-function-invocation (boot)
   (with-accessors ((e2 sicl-boot:e2)

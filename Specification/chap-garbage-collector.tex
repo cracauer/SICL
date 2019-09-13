@@ -77,19 +77,20 @@ The global collector cycles through the following phases:
   its behalf.
 \item Waiting for roots.  In this phase, the global collector waits
   for each application thread or each spawned thread to finish
-  indicating its part of the global root set.
+  indicating its part of the global root set.  Dyads and racks are
+  treated as independent objects.
 \item Mark.  In this phase, the global collector traces and marks the
-  live objects.
+  live objects starting with the marked roots.
 \item Collecting unmarked dyads.  In this phase, the global collector
   scans the dyads and collects the unmarked ones into a linked list.
-\item Freeing racks.  In this phase, the global collector iterates
-  through the collected list of unmarked dyads and frees the rack
-  belonging to each of the general instance headers in the list.
+\item Freeing unmarked racks.  In this phase, the global collector
+  iterates through the allocated racks in the rack part of the heap
+  and frees unmarked racks.
 \item Merging free lists.  In this phase, the global collector merges
   the newly created linked list of unmarked dyads with the existing
   free list.
-\item Clearing bitmaps.  In this final phase, the bitmaps used during
-  collection are cleared.
+\item Clearing mark bits.  In this final phase, the mark bits used for
+  marking objects as live are cleared.
 \end{enumerate}
 
 \subsection{Idle phase}
@@ -150,15 +151,15 @@ the global heap. For application threads that are blocked, for example
 waiting for input or output, the global collector spawns a thread to
 run the garbage collector on behalf of the application thread.
 
-The global collector maintains two bitmaps, one for black objects and
-one for gray objects.  Each bitmap contains a bit for every dyad.  In
-addition, the gray bitmap has a multi-level \emph{index}, making it
-possible to find an arbitrary gray object in only a few cycles.  For
-each 64-bit word in the primary bitmap, a bit in a secondary bitmap is
-maintained.  The bit in the secondary bitmap is set if there is at
-least one bit set in the 64-bit word in the primary bitmap.
-Additional levels of index exist until the last level fits in a single
-64-bit word.
+The global collector maintains two bitmaps for the purpose of marking
+dyads, one for black objects and one for gray objects.  Each bitmap
+contains a bit for every dyad.  In addition, the gray bitmap has a
+multi-level \emph{index}, making it possible to find an arbitrary gray
+object in only a few cycles.  For each 64-bit word in the primary
+bitmap, a bit in a secondary bitmap is maintained.  The bit in the
+secondary bitmap is set if there is at least one bit set in the 64-bit
+word in the primary bitmap.  Additional levels of index exist until
+the last level fits in a single 64-bit word.
 
 To include an object in the set of gray objects, the address is used
 to determine a bit position in the primary bitmap.  Before the
@@ -189,6 +190,29 @@ the cache).  The cache could for instance be a vector with around a
 million elements.  Such a vector would occupy only 8 megabytes of
 memory which is comparable to the space taken up by the gray bitmaps.
 
+Every rack has a (single) mark bit as well.  Since there is plenty of
+room in the chunk that is used for the rack, there is no need to use
+separate bitmaps for the mark bits of the racks.  Instead, a bit in
+the \emph{size} field described in \refApp{app-memory-allocator} is
+used.
+
+Each rack has a single mark bit, so it can be only black or white.
+This invariant is simply maintained by the recursive scanning of its
+contained object, whenever it is found to be live.  The reason for not
+allowing racks to be gray is that we would then need to scan the
+entire rack zone for gray objects, or maintain additional separate
+mark bits with indices, just as we do for dyads.
+\footnote{We could allow for a rack to be gray, provided there is room
+  for it in the fixed-size cache.  We could even evict a dyad from the
+  cache to make room for a rack.  If the global collector never colors
+  a rack gray, and instead always recursively scans it and colors the
+  object it contains gray instead, then the only situation where a
+  rack is colored gray would be when the mutator has a pointer to a
+  rack with no pointer to the header, so there will be very few racks
+  that are gray.  The reason we would like to allow for a rack to be
+  gray sometimes is so that the mutator will not have unbounded pauses
+  when it is asked for roots.}
+
 \subsection{Collecting unmarked dyads}
 
 We collect unmarked dyads into a list that is separate from the free
@@ -200,18 +224,17 @@ If the number of dyads recovered is insufficient, i.e. a new
 allocation would be triggered very soon, more memory is requested from
 the system and used for dyads.
 
-\subsection{Freeing racks}
+\subsection{Freeing unmarked racks}
 
-During this phase, the free list of unmarked dyads is traversed, and
-whenever the dyad is a general instance, the corresponding rack is
-freed.
+During this phase, the racks that are indicated as allocated are
+traversed, and any rack that is unmarked is freed.
 
 \subsection{Merging free lists}
 
 Once the racks of unmarked dyads have been freed, the two free lists
 are merged into a single one.
 
-\subsection{Clearing bitmaps}
+\subsection{Clearing mark bits}
 
 Finally, we clear all the bitmaps used for marking, and we either
 enter the idle phase, or start a new collection, depending on the

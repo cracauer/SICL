@@ -170,6 +170,9 @@
 (defclass catch-instruction (instruction multiple-successors-mixin)
   ())
 
+(defmethod dynamic-environment-output ((instruction catch-instruction))
+  (second (outputs instruction)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Instruction UNWIND-INSTRUCTION.
@@ -215,6 +218,9 @@
 (defclass bind-instruction
     (instruction one-successor-mixin side-effect-mixin)
   ())
+
+(defmethod dynamic-environment-output ((instruction bind-instruction))
+  (first (outputs instruction)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -299,7 +305,7 @@
 ;;;
 ;;; This instruction is similar to the NOP-INSTRUCTION in that it does
 ;;; nothing.  The difference is that this instruction takes a single
-;;; input, is a lexical variable.  The purpose is to create an
+;;; input, which is a lexical location.  The purpose is to create an
 ;;; artificial use for the input so that it will be kept alive until
 ;;; after this instruction is encountered.  An instance of this
 ;;; instruction class will typically be emitted when the DEBUG quality

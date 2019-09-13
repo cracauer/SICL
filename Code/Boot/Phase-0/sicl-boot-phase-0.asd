@@ -2,7 +2,7 @@
 
 (defsystem #:sicl-boot-phase-0
   :depends-on (#:sicl-boot-base
-               #:sicl-hir-to-cl
+               #:sicl-hir-interpreter
                #:sicl-source-tracking
                #:sicl-data-and-control-flow-support
                #:sicl-package-support
@@ -15,7 +15,6 @@
   :serial t
   :components
   ((:file "packages")
-   (:file "client")
    (:file "eval")
    (:file "compile-file")
    (:file "host-load")

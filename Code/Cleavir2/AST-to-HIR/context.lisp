@@ -5,7 +5,7 @@
 ;;; Compilation context.
 ;;;
 ;;; Each AST is compiled in a particular COMPILATION CONTEXT or
-;;; CONTEXT for short.  A context object has three components:
+;;; CONTEXT for short.  A context object has five components:
 ;;;
 ;;; 1. SUCCESSORS, which is a proper list containing one or two
 ;;; elements.  These elements are instructions resulting from the
@@ -31,27 +31,35 @@
 ;;; 3. INVOCATION, always an ENTER-INSTRUCTION.  It indicates the
 ;;; function to which the code to be compiled belongs.
 ;;;
+;;; 4. DYNAMIC-ENVIRONMENT-LOCATION, which is a lexical location that
+;;; indicates in which dynamic environment an instruction is executed.
+;;; The value of this component is stored in the corresponding slot in
+;;; each instruction.
+;;;
+;;; 5. VALUES-ENVIRONMENT-LOCATION, which is a lexical location that
+;;; indicates in which environment for multiple values the instruction
+;;; is executed.  The value of this component is stored in the
+;;; corresponding slot in each instruction.
+;;;
 ;;; The following combinations of SUCCESSORS and RESULTS can occur:
 ;;;
 ;;;   SUCCESSORS has one element.  then RESULTS can be a list of
-;;;   lexical locations or a single values location.
+;;;   lexical locations or the keyword symbol :VALUES.
 ;;;
 ;;;      If RESULTS is the empty list, this means that no values are
 ;;;      required.  Forms inside a PROGN other than the last are
 ;;;      compiled in a context like this.
 ;;;
-;;;      If RESULTS has a single element, then a single value is
+;;;      If RESULTS is a singleton list, then a single value is
 ;;;      required.  Arguments to function calls are examples of ASTs
 ;;;      that are compiled in a context like this.
 ;;;
-;;;      If RESULTS has more than one element, then that many values
-;;;      are required.  The VALUES-FORM-AST of MULTIPLE-VALUE-BIND-AST
-;;;      is compiled in a context like this.
+;;;      If RESULTS is alist with more than one element, then that
+;;;      many values are required.  The VALUES-FORM-AST of
+;;;      MULTIPLE-VALUE-BIND-AST is compiled in a context like this.
 ;;;
-;;;      If RESULTS is a values location, then all values are
-;;;      required.  An example of the use of this context is for
-;;;      compiling the FIRST-FORM of a MULTIPLE-VALUE-PROG1 special
-;;;      form.
+;;;      If RESULTS is the symbol :VALUES, then all values are
+;;;      required and will be stored in the global values location.
 ;;;
 ;;;   SUCCESSOR has two elements.  Then RESULTS is the empty list,
 ;;;   meaning that no values are required.  The TEST-AST of an IF-AST
@@ -60,6 +68,10 @@
 ;;;   SUCCESSORS has more than two elements.  This possibility is
 ;;;   currently not used.  It is meant to be used for forms like CASE,
 ;;;   TYPECASE, etc.  Again, the RESULTS would be the empty list.
+;;;   Notice that We do have instructions with more than two
+;;;   successors.  The CATCH-INSTRUCTION is such an instruction.  But
+;;;   those successors are not generated as a result of the SUCCESSORS
+;;;   information in the compilation context.
 
 (defclass context ()
   ((%results :initarg :results :reader results)
@@ -67,7 +79,10 @@
    (%invocation :initarg :invocation :reader invocation)
    (%dynamic-environment-location
     :initarg :dynamic-environment-location
-    :reader dynamic-environment-location)))
+    :reader dynamic-environment-location)
+   (%values-environment-location
+    :initarg :values-environment-location
+    :reader values-environment-location)))
 
 (defmethod initialize-instance :after ((context context) &key result successor)
   (let ((successors (if (null successor) (successors context) (list successor)))
@@ -76,7 +91,7 @@
                      (every (lambda (result)
                               (typep result 'cleavir-ir:lexical-location))
                             results))
-                (typep results 'cleavir-ir:values-location))
+                (eq results :values))
       (error "illegal results: ~s" results))
     (unless (and (listp successors)
                  (<= 1 (length successors) 2)
@@ -91,22 +106,32 @@
     (unless (typep (dynamic-environment-location context) 'cleavir-ir:lexical-location)
       (error "Illegal dynamic environment location ~s"
              (dynamic-environment-location context)))
+    (unless (typep (values-environment-location context) 'cleavir-ir:lexical-location)
+      (error "Illegal values environment location ~s"
+             (values-environment-location context)))
     (reinitialize-instance context
       :results results
       :successors successors)))
 
-(defun context (results successors invocation dynamic-environment-location)
+(defun context
+    (results
+     successors
+     invocation
+     dynamic-environment-location
+     values-environment-location)
   (make-instance 'context
     :results results
     :successors successors
     :invocation invocation
-    :dynamic-environment-location dynamic-environment-location))
+    :dynamic-environment-location dynamic-environment-location
+    :values-environment-location values-environment-location))
 
 (defmethod print-object ((obj context) stream)
   (print-unreadable-object (obj stream)
     (format stream " results: ~s" (results obj))
     (format stream " successors: ~s" (successors obj))
-    (format stream " dynenv: ~s" (dynamic-environment-location obj))))
+    (format stream " dynenv: ~s" (dynamic-environment-location obj))
+    (format stream " valuesenv: ~s" (values-environment-location obj))))
 
 (defun clone-context (context &rest keyword-arguments)
   (apply #'make-instance 'context
@@ -116,4 +141,6 @@
                 :successors (successors context)
                 :invocation (invocation context)
                 :dynamic-environment-location
-                (dynamic-environment-location context)))))
+                (dynamic-environment-location context)
+                :values-environment-location
+                (values-environment-location context)))))
